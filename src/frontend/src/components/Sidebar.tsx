@@ -3,11 +3,13 @@ import { Button } from "@/components/ui/button";
 import {
   BarChart2,
   BookOpen,
+  ClipboardList,
   Crown,
   LayoutDashboard,
   Library,
   LogOut,
   Menu,
+  Shield,
   Target,
   X,
   Zap,
@@ -15,6 +17,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import type { ProStatus } from "../hooks/useProStatus";
+import ThemeToggle from "./ThemeToggle";
 
 export type SectionId =
   | "dashboard"
@@ -22,7 +25,10 @@ export type SectionId =
   | "weakness"
   | "materials"
   | "analytics"
-  | "subscription";
+  | "subscription"
+  | "practice"
+  | "mock"
+  | "admin";
 
 interface SidebarProps {
   currentSection: SectionId;
@@ -30,6 +36,7 @@ interface SidebarProps {
   onLogout: () => void;
   principalShort: string;
   proStatus: ProStatus;
+  isAdmin?: boolean;
 }
 
 const NAV_ITEMS: {
@@ -37,13 +44,17 @@ const NAV_ITEMS: {
   label: string;
   icon: React.ElementType;
   proOnly?: boolean;
+  adminOnly?: boolean;
 }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "plan", label: "Today's Plan", icon: BookOpen },
+  { id: "practice", label: "Practice", icon: BookOpen },
+  { id: "mock", label: "Mini Mock", icon: ClipboardList },
   { id: "weakness", label: "Weakness", icon: Target },
   { id: "materials", label: "Materials", icon: Library },
   { id: "analytics", label: "Analytics", icon: BarChart2, proOnly: true },
   { id: "subscription", label: "Subscription", icon: Crown },
+  { id: "admin", label: "Admin", icon: Shield, adminOnly: true },
 ];
 
 const PRIMARY = "oklch(0.72 0.17 195)";
@@ -52,10 +63,13 @@ interface NavItemProps {
   item: (typeof NAV_ITEMS)[number];
   isActive: boolean;
   isPro: boolean;
+  isAdmin: boolean;
   onClick: () => void;
 }
 
-function NavItem({ item, isActive, isPro, onClick }: NavItemProps) {
+function NavItem({ item, isActive, isPro, isAdmin, onClick }: NavItemProps) {
+  // Hide admin-only items from non-admins
+  if (item.adminOnly && !isAdmin) return null;
   return (
     <button
       type="button"
@@ -68,22 +82,22 @@ function NavItem({ item, isActive, isPro, onClick }: NavItemProps) {
               color: PRIMARY,
             }
           : {
-              color: "oklch(0.58 0.012 250)",
+              color: "oklch(var(--muted-foreground))",
             }
       }
       onMouseEnter={(e) => {
         if (!isActive) {
           (e.currentTarget as HTMLButtonElement).style.background =
-            "oklch(0.20 0.018 250)";
+            "oklch(var(--secondary))";
           (e.currentTarget as HTMLButtonElement).style.color =
-            "oklch(0.78 0.012 250)";
+            "oklch(var(--secondary-foreground))";
         }
       }}
       onMouseLeave={(e) => {
         if (!isActive) {
           (e.currentTarget as HTMLButtonElement).style.background = "";
           (e.currentTarget as HTMLButtonElement).style.color =
-            "oklch(0.58 0.012 250)";
+            "oklch(var(--muted-foreground))";
         }
       }}
     >
@@ -128,6 +142,7 @@ export default function Sidebar({
   onLogout,
   principalShort,
   proStatus,
+  isAdmin = false,
 }: SidebarProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -142,14 +157,14 @@ export default function Sidebar({
       <aside
         className="hidden lg:flex flex-col h-screen sticky top-0 w-60 flex-shrink-0"
         style={{
-          background: "oklch(0.125 0.016 250)",
-          borderRight: "1px solid oklch(0.22 0.02 250)",
+          background: "oklch(var(--sidebar))",
+          borderRight: "1px solid oklch(var(--sidebar-border))",
         }}
       >
         {/* Logo */}
         <div
           className="px-5 py-5 flex items-center gap-2.5"
-          style={{ borderBottom: "1px solid oklch(0.20 0.02 250)" }}
+          style={{ borderBottom: "1px solid oklch(var(--sidebar-border))" }}
         >
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -185,6 +200,7 @@ export default function Sidebar({
               item={item}
               isActive={currentSection === item.id}
               isPro={proStatus.isPro}
+              isAdmin={isAdmin}
               onClick={() => handleNavigate(item.id)}
             />
           ))}
@@ -193,13 +209,13 @@ export default function Sidebar({
         {/* User Info at bottom */}
         <div
           className="px-3 py-4"
-          style={{ borderTop: "1px solid oklch(0.20 0.02 250)" }}
+          style={{ borderTop: "1px solid oklch(var(--sidebar-border))" }}
         >
           {principalShort && (
             <div className="px-3 py-2 mb-2">
               <p
                 className="font-mono text-xs truncate"
-                style={{ color: "oklch(0.40 0.012 250)" }}
+                style={{ color: "oklch(var(--muted-foreground))" }}
               >
                 {principalShort}
               </p>
@@ -210,7 +226,7 @@ export default function Sidebar({
             size="sm"
             onClick={onLogout}
             className="w-full justify-start font-display font-medium text-sm h-9 px-3"
-            style={{ color: "oklch(0.45 0.012 250)" }}
+            style={{ color: "oklch(var(--muted-foreground))" }}
           >
             <LogOut className="w-4 h-4 mr-2.5" />
             Sign out
@@ -222,9 +238,9 @@ export default function Sidebar({
       <div
         className="lg:hidden flex items-center justify-between px-4 h-14 sticky top-0 z-30"
         style={{
-          background: "oklch(0.13 0.015 250 / 0.92)",
+          background: "oklch(var(--background) / 0.92)",
           backdropFilter: "blur(12px)",
-          borderBottom: "1px solid oklch(0.22 0.02 250 / 0.6)",
+          borderBottom: "1px solid oklch(var(--border) / 0.6)",
         }}
       >
         <div className="flex items-center gap-2">
@@ -253,14 +269,17 @@ export default function Sidebar({
             </span>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0"
-          onClick={() => setMobileOpen(true)}
-        >
-          <Menu className="w-4 h-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={() => setMobileOpen(true)}
+          >
+            <Menu className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Drawer */}
@@ -285,14 +304,16 @@ export default function Sidebar({
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="fixed left-0 top-0 bottom-0 z-50 w-72 flex flex-col"
               style={{
-                background: "oklch(0.125 0.016 250)",
-                borderRight: "1px solid oklch(0.22 0.02 250)",
+                background: "oklch(var(--sidebar))",
+                borderRight: "1px solid oklch(var(--sidebar-border))",
               }}
             >
               {/* Header */}
               <div
                 className="px-5 py-4 flex items-center justify-between"
-                style={{ borderBottom: "1px solid oklch(0.20 0.02 250)" }}
+                style={{
+                  borderBottom: "1px solid oklch(var(--sidebar-border))",
+                }}
               >
                 <div className="flex items-center gap-2.5">
                   <div
@@ -326,6 +347,7 @@ export default function Sidebar({
                     item={item}
                     isActive={currentSection === item.id}
                     isPro={proStatus.isPro}
+                    isAdmin={isAdmin}
                     onClick={() => handleNavigate(item.id)}
                   />
                 ))}
@@ -334,13 +356,13 @@ export default function Sidebar({
               {/* Bottom */}
               <div
                 className="px-3 py-4"
-                style={{ borderTop: "1px solid oklch(0.20 0.02 250)" }}
+                style={{ borderTop: "1px solid oklch(var(--sidebar-border))" }}
               >
                 {principalShort && (
                   <div className="px-3 py-2 mb-2">
                     <p
                       className="font-mono text-xs truncate"
-                      style={{ color: "oklch(0.40 0.012 250)" }}
+                      style={{ color: "oklch(var(--muted-foreground))" }}
                     >
                       {principalShort}
                     </p>
@@ -354,7 +376,7 @@ export default function Sidebar({
                     onLogout();
                   }}
                   className="w-full justify-start font-display font-medium text-sm h-9 px-3"
-                  style={{ color: "oklch(0.45 0.012 250)" }}
+                  style={{ color: "oklch(var(--muted-foreground))" }}
                 >
                   <LogOut className="w-4 h-4 mr-2.5" />
                   Sign out
@@ -369,43 +391,54 @@ export default function Sidebar({
       <div
         className="lg:hidden fixed bottom-0 left-0 right-0 z-20 flex"
         style={{
-          background: "oklch(0.13 0.015 250 / 0.95)",
+          background: "oklch(var(--background) / 0.95)",
           backdropFilter: "blur(16px)",
-          borderTop: "1px solid oklch(0.22 0.02 250 / 0.6)",
+          borderTop: "1px solid oklch(var(--border) / 0.6)",
         }}
       >
-        {NAV_ITEMS.slice(0, 5).map((item) => {
-          const isActive = currentSection === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => handleNavigate(item.id)}
-              className="flex-1 flex flex-col items-center py-2.5 gap-1 relative"
-            >
-              <item.icon
-                className="w-4.5 h-4.5"
-                style={{
-                  color: isActive ? PRIMARY : "oklch(0.45 0.012 250)",
-                  width: "18px",
-                  height: "18px",
-                }}
-              />
-              <span
-                className="text-[9px] font-display font-medium"
-                style={{ color: isActive ? PRIMARY : "oklch(0.40 0.012 250)" }}
+        {NAV_ITEMS.filter((item) => {
+          if (item.adminOnly) return isAdmin;
+          return true;
+        })
+          .slice(0, 5)
+          .map((item) => {
+            const isActive = currentSection === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleNavigate(item.id)}
+                className="flex-1 flex flex-col items-center py-2.5 gap-1 relative"
               >
-                {item.label.split(" ")[0]}
-              </span>
-              {isActive && (
-                <div
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
-                  style={{ background: PRIMARY }}
+                <item.icon
+                  className="w-4.5 h-4.5"
+                  style={{
+                    color: isActive
+                      ? PRIMARY
+                      : "oklch(var(--muted-foreground))",
+                    width: "18px",
+                    height: "18px",
+                  }}
                 />
-              )}
-            </button>
-          );
-        })}
+                <span
+                  className="text-[9px] font-display font-medium"
+                  style={{
+                    color: isActive
+                      ? PRIMARY
+                      : "oklch(var(--muted-foreground))",
+                  }}
+                >
+                  {item.label.split(" ")[0]}
+                </span>
+                {isActive && (
+                  <div
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full"
+                    style={{ background: PRIMARY }}
+                  />
+                )}
+              </button>
+            );
+          })}
       </div>
     </>
   );

@@ -10,6 +10,39 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface MockResult {
+  'id' : string,
+  'score' : bigint,
+  'totalQuestions' : bigint,
+  'mathsCorrect' : bigint,
+  'timestamp' : bigint,
+  'chemCorrect' : bigint,
+  'physicsCorrect' : bigint,
+  'accuracy' : number,
+}
+export interface PYQQuestion {
+  'id' : string,
+  'correctOption' : string,
+  'subject' : string,
+  'difficulty' : string,
+  'year' : bigint,
+  'questionText' : string,
+  'chapter' : string,
+  'examType' : string,
+  'optionA' : string,
+  'optionB' : string,
+  'optionC' : string,
+  'optionD' : string,
+}
+export interface TransformationInput {
+  'context' : Uint8Array,
+  'response' : http_request_result,
+}
+export interface TransformationOutput {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<http_header>,
+}
 export interface UserChapter {
   'subject' : string,
   'importance' : bigint,
@@ -35,21 +68,85 @@ export interface UserSubscription {
   'subscriptionExpiresAt' : [] | [bigint],
   'isPro' : boolean,
 }
+export interface http_header { 'value' : string, 'name' : string }
+export interface http_request_result {
+  'status' : bigint,
+  'body' : Uint8Array,
+  'headers' : Array<http_header>,
+}
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'addQuestion' : ActorMethod<
+    [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      bigint,
+      string,
+      string,
+      string,
+      string,
+    ],
+    string
+  >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'deleteQuestion' : ActorMethod<[string], boolean>,
+  'generateSolution' : ActorMethod<
+    [string, string, string, string, string, string],
+    string
+  >,
+  'getAllUsers' : ActorMethod<[], Array<string>>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getChapters' : ActorMethod<[], Array<UserChapter>>,
   'getDailyPlanCount' : ActorMethod<[], bigint>,
+  'getDailyPracticeCount' : ActorMethod<[], bigint>,
+  'getMockResults' : ActorMethod<[], Array<MockResult>>,
   'getMonthlyDoneCount' : ActorMethod<[], bigint>,
   'getProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getQuestions' : ActorMethod<[], Array<PYQQuestion>>,
+  'getQuestionsByFilter' : ActorMethod<
+    [string, string, string, string],
+    Array<PYQQuestion>
+  >,
   'getStreak' : ActorMethod<[], UserStreak>,
   'getSubscription' : ActorMethod<[], UserSubscription>,
+  'getWeeklyMockCount' : ActorMethod<[], bigint>,
   'incrementDailyPlanCount' : ActorMethod<[], bigint>,
+  'incrementDailyPracticeCount' : ActorMethod<[], bigint>,
+  'incrementWeeklyMockCount' : ActorMethod<[], bigint>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'markChapterDone' : ActorMethod<[string], boolean>,
+  'saveMockResult' : ActorMethod<
+    [bigint, bigint, number, bigint, bigint, bigint],
+    string
+  >,
   'saveProfile' : ActorMethod<[string, string, bigint, number], undefined>,
+  'seedQuestions' : ActorMethod<[], undefined>,
+  'setOpenAiKey' : ActorMethod<[string], undefined>,
+  'setUserPro' : ActorMethod<[string, boolean], boolean>,
   'togglePro' : ActorMethod<[], UserSubscription>,
+  'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
+  'updatePerformanceWeakness' : ActorMethod<[string, number], boolean>,
+  'updateQuestion' : ActorMethod<
+    [
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      bigint,
+      string,
+      string,
+      string,
+      string,
+    ],
+    boolean
+  >,
   'updateWeakness' : ActorMethod<[string, bigint], boolean>,
 }
 export declare const idlService: IDL.ServiceClass;

@@ -93,6 +93,48 @@ export interface UserStreak {
     lastActiveDate: string;
     currentStreak: bigint;
 }
+export interface http_header {
+    value: string;
+    name: string;
+}
+export interface http_request_result {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export interface TransformationOutput {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export interface PYQQuestion {
+    id: string;
+    correctOption: string;
+    subject: string;
+    difficulty: string;
+    year: bigint;
+    questionText: string;
+    chapter: string;
+    examType: string;
+    optionA: string;
+    optionB: string;
+    optionC: string;
+    optionD: string;
+}
+export interface TransformationInput {
+    context: Uint8Array;
+    response: http_request_result;
+}
+export interface MockResult {
+    id: string;
+    score: bigint;
+    totalQuestions: bigint;
+    mathsCorrect: bigint;
+    timestamp: bigint;
+    chemCorrect: bigint;
+    physicsCorrect: bigint;
+    accuracy: number;
+}
 export interface UserSubscription {
     subscriptionExpiresAt?: bigint;
     isPro: boolean;
@@ -118,19 +160,37 @@ export enum UserRole {
 }
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
+    addQuestion(questionText: string, optionA: string, optionB: string, optionC: string, optionD: string, correctOption: string, year: bigint, subject: string, chapter: string, difficulty: string, examType: string): Promise<string>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    deleteQuestion(id: string): Promise<boolean>;
+    generateSolution(questionText: string, optionA: string, optionB: string, optionC: string, optionD: string, correctOption: string): Promise<string>;
+    getAllUsers(): Promise<Array<string>>;
     getCallerUserRole(): Promise<UserRole>;
     getChapters(): Promise<Array<UserChapter>>;
     getDailyPlanCount(): Promise<bigint>;
+    getDailyPracticeCount(): Promise<bigint>;
+    getMockResults(): Promise<Array<MockResult>>;
     getMonthlyDoneCount(): Promise<bigint>;
     getProfile(): Promise<UserProfile | null>;
+    getQuestions(): Promise<Array<PYQQuestion>>;
+    getQuestionsByFilter(subject: string, chapter: string, difficulty: string, examType: string): Promise<Array<PYQQuestion>>;
     getStreak(): Promise<UserStreak>;
     getSubscription(): Promise<UserSubscription>;
+    getWeeklyMockCount(): Promise<bigint>;
     incrementDailyPlanCount(): Promise<bigint>;
+    incrementDailyPracticeCount(): Promise<bigint>;
+    incrementWeeklyMockCount(): Promise<bigint>;
     isCallerAdmin(): Promise<boolean>;
     markChapterDone(chapterName: string): Promise<boolean>;
+    saveMockResult(score: bigint, totalQuestions: bigint, accuracy: number, physicsCorrect: bigint, chemCorrect: bigint, mathsCorrect: bigint): Promise<string>;
     saveProfile(examType: string, examMonth: string, examYear: bigint, dailyStudyHours: number): Promise<void>;
+    seedQuestions(): Promise<void>;
+    setOpenAiKey(key: string): Promise<void>;
+    setUserPro(userPrincipal: string, isPro: boolean): Promise<boolean>;
     togglePro(): Promise<UserSubscription>;
+    transform(input: TransformationInput): Promise<TransformationOutput>;
+    updatePerformanceWeakness(chapterName: string, accuracy: number): Promise<boolean>;
+    updateQuestion(id: string, questionText: string, optionA: string, optionB: string, optionC: string, optionD: string, correctOption: string, year: bigint, subject: string, chapter: string, difficulty: string, examType: string): Promise<boolean>;
     updateWeakness(chapterName: string, weakness: bigint): Promise<boolean>;
 }
 import type { UserChapter as _UserChapter, UserProfile as _UserProfile, UserRole as _UserRole, UserSubscription as _UserSubscription } from "./declarations/backend.did.d.ts";
@@ -150,6 +210,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async addQuestion(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: bigint, arg7: string, arg8: string, arg9: string, arg10: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addQuestion(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addQuestion(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);
+            return result;
+        }
+    }
     async assignCallerUserRole(arg0: Principal, arg1: UserRole): Promise<void> {
         if (this.processError) {
             try {
@@ -161,6 +235,48 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async deleteQuestion(arg0: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteQuestion(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteQuestion(arg0);
+            return result;
+        }
+    }
+    async generateSolution(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.generateSolution(arg0, arg1, arg2, arg3, arg4, arg5);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.generateSolution(arg0, arg1, arg2, arg3, arg4, arg5);
+            return result;
+        }
+    }
+    async getAllUsers(): Promise<Array<string>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllUsers();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllUsers();
             return result;
         }
     }
@@ -206,6 +322,34 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getDailyPracticeCount(): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getDailyPracticeCount();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getDailyPracticeCount();
+            return result;
+        }
+    }
+    async getMockResults(): Promise<Array<MockResult>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMockResults();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMockResults();
+            return result;
+        }
+    }
     async getMonthlyDoneCount(): Promise<bigint> {
         if (this.processError) {
             try {
@@ -232,6 +376,34 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getProfile();
             return from_candid_opt_n9(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getQuestions(): Promise<Array<PYQQuestion>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getQuestions();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getQuestions();
+            return result;
+        }
+    }
+    async getQuestionsByFilter(arg0: string, arg1: string, arg2: string, arg3: string): Promise<Array<PYQQuestion>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getQuestionsByFilter(arg0, arg1, arg2, arg3);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getQuestionsByFilter(arg0, arg1, arg2, arg3);
+            return result;
         }
     }
     async getStreak(): Promise<UserStreak> {
@@ -262,6 +434,20 @@ export class Backend implements backendInterface {
             return from_candid_UserSubscription_n10(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getWeeklyMockCount(): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getWeeklyMockCount();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getWeeklyMockCount();
+            return result;
+        }
+    }
     async incrementDailyPlanCount(): Promise<bigint> {
         if (this.processError) {
             try {
@@ -273,6 +459,34 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.incrementDailyPlanCount();
+            return result;
+        }
+    }
+    async incrementDailyPracticeCount(): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.incrementDailyPracticeCount();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.incrementDailyPracticeCount();
+            return result;
+        }
+    }
+    async incrementWeeklyMockCount(): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.incrementWeeklyMockCount();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.incrementWeeklyMockCount();
             return result;
         }
     }
@@ -304,6 +518,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async saveMockResult(arg0: bigint, arg1: bigint, arg2: number, arg3: bigint, arg4: bigint, arg5: bigint): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.saveMockResult(arg0, arg1, arg2, arg3, arg4, arg5);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.saveMockResult(arg0, arg1, arg2, arg3, arg4, arg5);
+            return result;
+        }
+    }
     async saveProfile(arg0: string, arg1: string, arg2: bigint, arg3: number): Promise<void> {
         if (this.processError) {
             try {
@@ -315,6 +543,48 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveProfile(arg0, arg1, arg2, arg3);
+            return result;
+        }
+    }
+    async seedQuestions(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.seedQuestions();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.seedQuestions();
+            return result;
+        }
+    }
+    async setOpenAiKey(arg0: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setOpenAiKey(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setOpenAiKey(arg0);
+            return result;
+        }
+    }
+    async setUserPro(arg0: string, arg1: boolean): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setUserPro(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setUserPro(arg0, arg1);
             return result;
         }
     }
@@ -330,6 +600,48 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.togglePro();
             return from_candid_UserSubscription_n10(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async transform(arg0: TransformationInput): Promise<TransformationOutput> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.transform(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.transform(arg0);
+            return result;
+        }
+    }
+    async updatePerformanceWeakness(arg0: string, arg1: number): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updatePerformanceWeakness(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updatePerformanceWeakness(arg0, arg1);
+            return result;
+        }
+    }
+    async updateQuestion(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string, arg6: string, arg7: bigint, arg8: string, arg9: string, arg10: string, arg11: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateQuestion(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateQuestion(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+            return result;
         }
     }
     async updateWeakness(arg0: string, arg1: bigint): Promise<boolean> {

@@ -7,14 +7,19 @@ import { useProStatus } from "../hooks/useProStatus";
 import {
   useGetChapters,
   useGetProfile,
+  useIsCallerAdmin,
   useSaveProfile,
 } from "../hooks/useQueries";
 import { getDaysLeft, getExamDate } from "../utils/planEngine";
+import AdminPage from "./AdminPage";
 import AnalyticsPage from "./AnalyticsPage";
 import DashboardPage from "./DashboardPage";
 import MaterialsPage from "./MaterialsPage";
+import MiniMockPage from "./MiniMockPage";
+import PracticePage from "./PracticePage";
 import Sidebar, { type SectionId } from "./Sidebar";
 import SubscriptionPage from "./SubscriptionPage";
+import ThemeToggle from "./ThemeToggle";
 import TodaysPlan from "./TodaysPlan";
 import WeaknessPanel from "./WeaknessPanel";
 
@@ -29,6 +34,7 @@ export default function AppShell() {
   const { data: chapters = [], isLoading: chaptersLoading } = useGetChapters();
   const saveProfile = useSaveProfile();
   const proStatus = useProStatus();
+  const { data: isAdmin = false } = useIsCallerAdmin();
 
   const mergedChapters: UserChapter[] =
     localChapters.length > 0 ? localChapters : chapters;
@@ -150,6 +156,23 @@ export default function AppShell() {
         );
       case "subscription":
         return <SubscriptionPage proStatus={proStatus} />;
+      case "practice":
+        return (
+          <PracticePage
+            proStatus={proStatus}
+            onUpgrade={() => setCurrentSection("subscription")}
+          />
+        );
+      case "mock":
+        return (
+          <MiniMockPage
+            proStatus={proStatus}
+            onUpgrade={() => setCurrentSection("subscription")}
+            onGoToDashboard={() => setCurrentSection("dashboard")}
+          />
+        );
+      case "admin":
+        return <AdminPage />;
       default:
         return null;
     }
@@ -166,6 +189,7 @@ export default function AppShell() {
         onLogout={handleLogout}
         principalShort={principalShort}
         proStatus={proStatus}
+        isAdmin={isAdmin}
       />
 
       {/* Main Content */}
@@ -174,21 +198,22 @@ export default function AppShell() {
         <div
           className="hidden lg:flex items-center justify-between px-6 h-12 flex-shrink-0"
           style={{
-            background: "oklch(0.13 0.015 250 / 0.85)",
+            background: "oklch(var(--background) / 0.85)",
             backdropFilter: "blur(8px)",
-            borderBottom: "1px solid oklch(0.22 0.02 250 / 0.5)",
+            borderBottom: "1px solid oklch(var(--border) / 0.5)",
           }}
         >
           <div />
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {principalShort && (
               <span
                 className="font-mono text-xs"
-                style={{ color: "oklch(0.38 0.012 250)" }}
+                style={{ color: "oklch(var(--muted-foreground))" }}
               >
                 {principalShort}
               </span>
             )}
+            <ThemeToggle />
           </div>
         </div>
 
@@ -200,7 +225,7 @@ export default function AppShell() {
         {/* Footer */}
         <footer
           className="hidden lg:block border-t py-4 px-6"
-          style={{ borderColor: "oklch(0.20 0.02 250 / 0.5)" }}
+          style={{ borderColor: "oklch(var(--border) / 0.5)" }}
         >
           <p
             className="text-center text-xs font-body"

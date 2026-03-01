@@ -21,11 +21,35 @@ export const UserChapter = IDL.Record({
   'timesStudied' : IDL.Nat,
   'chapterName' : IDL.Text,
 });
+export const MockResult = IDL.Record({
+  'id' : IDL.Text,
+  'score' : IDL.Int,
+  'totalQuestions' : IDL.Nat,
+  'mathsCorrect' : IDL.Nat,
+  'timestamp' : IDL.Int,
+  'chemCorrect' : IDL.Nat,
+  'physicsCorrect' : IDL.Nat,
+  'accuracy' : IDL.Float64,
+});
 export const UserProfile = IDL.Record({
   'dailyStudyHours' : IDL.Float64,
   'examType' : IDL.Text,
   'examYear' : IDL.Nat,
   'examMonth' : IDL.Text,
+});
+export const PYQQuestion = IDL.Record({
+  'id' : IDL.Text,
+  'correctOption' : IDL.Text,
+  'subject' : IDL.Text,
+  'difficulty' : IDL.Text,
+  'year' : IDL.Nat,
+  'questionText' : IDL.Text,
+  'chapter' : IDL.Text,
+  'examType' : IDL.Text,
+  'optionA' : IDL.Text,
+  'optionB' : IDL.Text,
+  'optionC' : IDL.Text,
+  'optionD' : IDL.Text,
 });
 export const UserStreak = IDL.Record({
   'lastActiveDate' : IDL.Text,
@@ -35,22 +59,111 @@ export const UserSubscription = IDL.Record({
   'subscriptionExpiresAt' : IDL.Opt(IDL.Int),
   'isPro' : IDL.Bool,
 });
+export const http_header = IDL.Record({
+  'value' : IDL.Text,
+  'name' : IDL.Text,
+});
+export const http_request_result = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(http_header),
+});
+export const TransformationInput = IDL.Record({
+  'context' : IDL.Vec(IDL.Nat8),
+  'response' : http_request_result,
+});
+export const TransformationOutput = IDL.Record({
+  'status' : IDL.Nat,
+  'body' : IDL.Vec(IDL.Nat8),
+  'headers' : IDL.Vec(http_header),
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'addQuestion' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Nat,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+      ],
+      [IDL.Text],
+      [],
+    ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'deleteQuestion' : IDL.Func([IDL.Text], [IDL.Bool], []),
+  'generateSolution' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Text],
+      [],
+    ),
+  'getAllUsers' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getChapters' : IDL.Func([], [IDL.Vec(UserChapter)], ['query']),
   'getDailyPlanCount' : IDL.Func([], [IDL.Nat], ['query']),
+  'getDailyPracticeCount' : IDL.Func([], [IDL.Nat], ['query']),
+  'getMockResults' : IDL.Func([], [IDL.Vec(MockResult)], ['query']),
   'getMonthlyDoneCount' : IDL.Func([], [IDL.Nat], ['query']),
   'getProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'getQuestions' : IDL.Func([], [IDL.Vec(PYQQuestion)], ['query']),
+  'getQuestionsByFilter' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Vec(PYQQuestion)],
+      ['query'],
+    ),
   'getStreak' : IDL.Func([], [UserStreak], ['query']),
   'getSubscription' : IDL.Func([], [UserSubscription], ['query']),
+  'getWeeklyMockCount' : IDL.Func([], [IDL.Nat], ['query']),
   'incrementDailyPlanCount' : IDL.Func([], [IDL.Nat], []),
+  'incrementDailyPracticeCount' : IDL.Func([], [IDL.Nat], []),
+  'incrementWeeklyMockCount' : IDL.Func([], [IDL.Nat], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'markChapterDone' : IDL.Func([IDL.Text], [IDL.Bool], []),
+  'saveMockResult' : IDL.Func(
+      [IDL.Int, IDL.Nat, IDL.Float64, IDL.Nat, IDL.Nat, IDL.Nat],
+      [IDL.Text],
+      [],
+    ),
   'saveProfile' : IDL.Func([IDL.Text, IDL.Text, IDL.Nat, IDL.Float64], [], []),
+  'seedQuestions' : IDL.Func([], [], []),
+  'setOpenAiKey' : IDL.Func([IDL.Text], [], []),
+  'setUserPro' : IDL.Func([IDL.Text, IDL.Bool], [IDL.Bool], []),
   'togglePro' : IDL.Func([], [UserSubscription], []),
+  'transform' : IDL.Func(
+      [TransformationInput],
+      [TransformationOutput],
+      ['query'],
+    ),
+  'updatePerformanceWeakness' : IDL.Func(
+      [IDL.Text, IDL.Float64],
+      [IDL.Bool],
+      [],
+    ),
+  'updateQuestion' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Nat,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+      ],
+      [IDL.Bool],
+      [],
+    ),
   'updateWeakness' : IDL.Func([IDL.Text, IDL.Nat], [IDL.Bool], []),
 });
 
@@ -70,11 +183,35 @@ export const idlFactory = ({ IDL }) => {
     'timesStudied' : IDL.Nat,
     'chapterName' : IDL.Text,
   });
+  const MockResult = IDL.Record({
+    'id' : IDL.Text,
+    'score' : IDL.Int,
+    'totalQuestions' : IDL.Nat,
+    'mathsCorrect' : IDL.Nat,
+    'timestamp' : IDL.Int,
+    'chemCorrect' : IDL.Nat,
+    'physicsCorrect' : IDL.Nat,
+    'accuracy' : IDL.Float64,
+  });
   const UserProfile = IDL.Record({
     'dailyStudyHours' : IDL.Float64,
     'examType' : IDL.Text,
     'examYear' : IDL.Nat,
     'examMonth' : IDL.Text,
+  });
+  const PYQQuestion = IDL.Record({
+    'id' : IDL.Text,
+    'correctOption' : IDL.Text,
+    'subject' : IDL.Text,
+    'difficulty' : IDL.Text,
+    'year' : IDL.Nat,
+    'questionText' : IDL.Text,
+    'chapter' : IDL.Text,
+    'examType' : IDL.Text,
+    'optionA' : IDL.Text,
+    'optionB' : IDL.Text,
+    'optionC' : IDL.Text,
+    'optionD' : IDL.Text,
   });
   const UserStreak = IDL.Record({
     'lastActiveDate' : IDL.Text,
@@ -84,26 +221,112 @@ export const idlFactory = ({ IDL }) => {
     'subscriptionExpiresAt' : IDL.Opt(IDL.Int),
     'isPro' : IDL.Bool,
   });
+  const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
+  const http_request_result = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(http_header),
+  });
+  const TransformationInput = IDL.Record({
+    'context' : IDL.Vec(IDL.Nat8),
+    'response' : http_request_result,
+  });
+  const TransformationOutput = IDL.Record({
+    'status' : IDL.Nat,
+    'body' : IDL.Vec(IDL.Nat8),
+    'headers' : IDL.Vec(http_header),
+  });
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    'addQuestion' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Nat,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+        ],
+        [IDL.Text],
+        [],
+      ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'deleteQuestion' : IDL.Func([IDL.Text], [IDL.Bool], []),
+    'generateSolution' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Text],
+        [],
+      ),
+    'getAllUsers' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getChapters' : IDL.Func([], [IDL.Vec(UserChapter)], ['query']),
     'getDailyPlanCount' : IDL.Func([], [IDL.Nat], ['query']),
+    'getDailyPracticeCount' : IDL.Func([], [IDL.Nat], ['query']),
+    'getMockResults' : IDL.Func([], [IDL.Vec(MockResult)], ['query']),
     'getMonthlyDoneCount' : IDL.Func([], [IDL.Nat], ['query']),
     'getProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'getQuestions' : IDL.Func([], [IDL.Vec(PYQQuestion)], ['query']),
+    'getQuestionsByFilter' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Vec(PYQQuestion)],
+        ['query'],
+      ),
     'getStreak' : IDL.Func([], [UserStreak], ['query']),
     'getSubscription' : IDL.Func([], [UserSubscription], ['query']),
+    'getWeeklyMockCount' : IDL.Func([], [IDL.Nat], ['query']),
     'incrementDailyPlanCount' : IDL.Func([], [IDL.Nat], []),
+    'incrementDailyPracticeCount' : IDL.Func([], [IDL.Nat], []),
+    'incrementWeeklyMockCount' : IDL.Func([], [IDL.Nat], []),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'markChapterDone' : IDL.Func([IDL.Text], [IDL.Bool], []),
+    'saveMockResult' : IDL.Func(
+        [IDL.Int, IDL.Nat, IDL.Float64, IDL.Nat, IDL.Nat, IDL.Nat],
+        [IDL.Text],
+        [],
+      ),
     'saveProfile' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Nat, IDL.Float64],
         [],
         [],
       ),
+    'seedQuestions' : IDL.Func([], [], []),
+    'setOpenAiKey' : IDL.Func([IDL.Text], [], []),
+    'setUserPro' : IDL.Func([IDL.Text, IDL.Bool], [IDL.Bool], []),
     'togglePro' : IDL.Func([], [UserSubscription], []),
+    'transform' : IDL.Func(
+        [TransformationInput],
+        [TransformationOutput],
+        ['query'],
+      ),
+    'updatePerformanceWeakness' : IDL.Func(
+        [IDL.Text, IDL.Float64],
+        [IDL.Bool],
+        [],
+      ),
+    'updateQuestion' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Nat,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+        ],
+        [IDL.Bool],
+        [],
+      ),
     'updateWeakness' : IDL.Func([IDL.Text, IDL.Nat], [IDL.Bool], []),
   });
 };

@@ -1,29 +1,30 @@
 import Time "mo:core/Time";
+import Int "mo:core/Int";
+import Nat "mo:core/Nat";
+import Float "mo:core/Float";
 import Array "mo:core/Array";
 import Map "mo:core/Map";
-import Text "mo:core/Text";
 import Iter "mo:core/Iter";
-import Nat "mo:core/Nat";
+import Text "mo:core/Text";
 import Runtime "mo:core/Runtime";
 import MixinAuthorization "authorization/MixinAuthorization";
 import AccessControl "authorization/access-control";
-import Migration "migration";
+import OutCall "http-outcalls/outcall";
 
-(with migration = Migration.run)
 actor {
   // System State
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
 
   // Data Models
-  type UserProfile = {
+  public type UserProfile = {
     examType : Text;
     examMonth : Text;
     examYear : Nat;
     dailyStudyHours : Float;
   };
 
-  type UserChapter = {
+  public type UserChapter = {
     chapterName : Text;
     subject : Text;
     importance : Nat;
@@ -32,33 +33,75 @@ actor {
     lastStudiedAt : ?Int;
   };
 
-  type UserSubscription = {
+  public type UserSubscription = {
     isPro : Bool;
     subscriptionExpiresAt : ?Int;
   };
 
-  type UserStreak = {
+  public type UserStreak = {
     lastActiveDate : Text;
     currentStreak : Nat;
   };
 
-  type MonthlyActivity = {
+  public type MonthlyActivity = {
     month : Text;
     count : Nat;
   };
 
-  type DailyPlanCount = {
+  public type DailyPlanCount = {
     date : Text;
     count : Nat;
   };
 
+  public type PYQQuestion = {
+    id : Text;
+    questionText : Text;
+    optionA : Text;
+    optionB : Text;
+    optionC : Text;
+    optionD : Text;
+    correctOption : Text;
+    year : Nat;
+    subject : Text;
+    chapter : Text;
+    difficulty : Text;
+    examType : Text;
+  };
+
+  public type DailyPracticeCount = {
+    date : Text;
+    count : Nat;
+  };
+
+  public type WeeklyMockCount = {
+    weekKey : Text;
+    count : Nat;
+  };
+
+  public type MockResult = {
+    id : Text;
+    timestamp : Int;
+    score : Int;
+    totalQuestions : Nat;
+    accuracy : Float;
+    physicsCorrect : Nat;
+    chemCorrect : Nat;
+    mathsCorrect : Nat;
+  };
+
   // Persistent Storage
+  var openAiKey = "";
+
   let userProfiles = Map.empty<Text, UserProfile>();
   let chapters = Map.empty<Text, Map.Map<Text, UserChapter>>();
   let userSubscriptions = Map.empty<Text, UserSubscription>();
   let userStreaks = Map.empty<Text, UserStreak>();
   let monthlyActivity = Map.empty<Text, MonthlyActivity>();
   let dailyPlanCounts = Map.empty<Text, DailyPlanCount>();
+  let questions = Map.empty<Text, PYQQuestion>();
+  let dailyPracticeCounts = Map.empty<Text, DailyPracticeCount>();
+  let weeklyMockCounts = Map.empty<Text, WeeklyMockCount>();
+  let mockResults = Map.empty<Text, [MockResult]>();
 
   // Syllabus Seed Data
   let physicsChapters = [
@@ -190,12 +233,12 @@ actor {
   };
 
   func getTodayDateString() : Text {
-    let nanosecondsInADay = 86400000000000;
-    let daysSinceEpoch = (Time.now() / nanosecondsInADay).toNat();
-    let epochOffset = 1970 * 365 + 8;
+    let nanosecondsInADay : Int = 86400000000000;
+    let daysSinceEpoch : Int = Time.now() / nanosecondsInADay;
+    let epochOffset : Int = 1970 * 365 + 8;
 
     let dayOfYear = (daysSinceEpoch + epochOffset) % 365;
-    let year = if (dayOfYear >= epochOffset) { 1970 + ((dayOfYear - epochOffset) / 365) } else {
+    let _year = if (dayOfYear >= epochOffset) { 1970 + ((dayOfYear - epochOffset) / 365) } else {
       1969;
     };
 
@@ -211,18 +254,31 @@ actor {
         let dayString = daysSinceEpoch.toText();
         "2024-01-" # dayString;
       } else if (daysSinceEpoch <= 60) {
-        let febDayString = (daysSinceEpoch - 31).toText();
+        let febDayInt = daysSinceEpoch - 31;
+        let febDayString = febDayInt.toText();
         "2024-02-" # febDayString;
       } else if (daysSinceEpoch <= 91) {
-        let marDayString = (daysSinceEpoch - 60).toText();
+        let marDayInt = daysSinceEpoch - 60;
+        let marDayString = marDayInt.toText();
         "2024-03-" # marDayString;
       } else if (daysSinceEpoch <= 97) {
-        let aprDayString = (daysSinceEpoch - 91).toText();
+        let aprDayInt = daysSinceEpoch - 91;
+        let aprDayString = aprDayInt.toText();
         "2024-04-" # aprDayString;
       } else {
         "2024-04-" # dayOfYear2024Prefix;
       };
     } else { dayOfYear2024Prefix };
+  };
+
+  func getWeekKeyString() : Text {
+    let daysSinceEpoch = (Time.now() / 86400000000000);
+    let dayOfYear = daysSinceEpoch % 365;
+    let weekNumber = (dayOfYear / 7) + 1;
+    let weekNumberText = if (weekNumber < 10) {
+      "0" # weekNumber.toText();
+    } else { weekNumber.toText() };
+    "2024-W" # weekNumberText;
   };
 
   public query ({ caller }) func getProfile() : async ?UserProfile {
@@ -467,6 +523,368 @@ actor {
           1;
         };
       };
+    };
+  };
+
+  // PYQ Question Bank Functions
+  public shared ({ caller }) func addQuestion(questionText : Text, optionA : Text, optionB : Text, optionC : Text, optionD : Text, correctOption : Text, year : Nat, subject : Text, chapter : Text, difficulty : Text, examType : Text) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can add questions");
+    };
+
+    let id = Time.now().toText() # "-" # year.toText();
+    let question : PYQQuestion = {
+      id;
+      questionText;
+      optionA;
+      optionB;
+      optionC;
+      optionD;
+      correctOption;
+      year;
+      subject;
+      chapter;
+      difficulty;
+      examType;
+    };
+    questions.add(id, question);
+    id;
+  };
+
+  public shared ({ caller }) func updateQuestion(id : Text, questionText : Text, optionA : Text, optionB : Text, optionC : Text, optionD : Text, correctOption : Text, year : Nat, subject : Text, chapter : Text, difficulty : Text, examType : Text) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can update questions");
+    };
+
+    switch (questions.get(id)) {
+      case (null) { false };
+      case (?_) {
+        let updatedQuestion : PYQQuestion = {
+          id;
+          questionText;
+          optionA;
+          optionB;
+          optionC;
+          optionD;
+          correctOption;
+          year;
+          subject;
+          chapter;
+          difficulty;
+          examType;
+        };
+        questions.add(id, updatedQuestion);
+        true;
+      };
+    };
+  };
+
+  public shared ({ caller }) func deleteQuestion(id : Text) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can delete questions");
+    };
+
+    switch (questions.get(id)) {
+      case (null) { false };
+      case (?_) {
+        questions.remove(id);
+        true;
+      };
+    };
+  };
+
+  public query ({ caller }) func getQuestions() : async [PYQQuestion] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access questions");
+    };
+    questions.values().toArray();
+  };
+
+  public query ({ caller }) func getQuestionsByFilter(subject : Text, chapter : Text, difficulty : Text, examType : Text) : async [PYQQuestion] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can filter questions");
+    };
+
+    let filtered = questions.values().filter(func(q) {
+      (subject.isEmpty() or q.subject == subject) and
+      (chapter.isEmpty() or q.chapter == chapter) and
+      (difficulty.isEmpty() or q.difficulty == difficulty) and
+      (examType.isEmpty() or q.examType == examType)
+    });
+    filtered.toArray();
+  };
+
+  // AI Solution Functions
+  public shared ({ caller }) func setOpenAiKey(key : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can set OpenAI key");
+    };
+    openAiKey := key;
+  };
+
+  public query ({ caller }) func transform(input : OutCall.TransformationInput) : async OutCall.TransformationOutput {
+    OutCall.transform(input);
+  };
+
+  public shared ({ caller }) func generateSolution(questionText : Text, optionA : Text, optionB : Text, optionC : Text, optionD : Text, correctOption : Text) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can generate solutions");
+    };
+
+    if (openAiKey.isEmpty()) {
+      return "Solution unavailable";
+    };
+
+    let systemPrompt = "You are a JEE expert tutor. Provide a concise step-by-step solution.";
+    let userPrompt = "Question: " # questionText # "\nOptions: A) " # optionA # " B) " # optionB # " C) " # optionC # " D) " # optionD # "\nCorrect Answer: " # correctOption # "\n\nProvide solution in this exact format:\nStep 1: [first step]\nStep 2: [second step]\nStep 3: [third step]\nFinal Answer: [answer with brief explanation]\nShortcut: [shortcut method if applicable, else 'None']\nCommon Mistake: [common error students make]";
+
+    let requestBody = "{\"model\": \"gpt-4o-mini\", \"messages\": [{\"role\": \"system\", \"content\": \"" # systemPrompt # "\"}, {\"role\": \"user\", \"content\": \"" # userPrompt # "\"}], \"max_tokens\": 500}";
+
+    let headers = [
+      { name = "Content-Type"; value = "application/json" },
+      { name = "Authorization"; value = "Bearer " # openAiKey },
+    ];
+
+    try {
+      let response = await OutCall.httpPostRequest(
+        "https://api.openai.com/v1/chat/completions",
+        headers,
+        requestBody,
+        transform,
+      );
+      switch (parseOpenAiResponse(response)) {
+        case (?solution) { solution };
+        case (null) { "Solution unavailable" };
+      };
+    } catch (_) {
+      "Solution unavailable";
+    };
+  };
+
+  func parseOpenAiResponse(response : Text) : ?Text {
+    if (response.size() > 0) {
+      ?response;
+    } else {
+      null;
+    };
+  };
+
+  // Daily Practice Count Functions
+  public query ({ caller }) func getDailyPracticeCount() : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access daily practice count");
+    };
+    let userId = caller.toText();
+    switch (dailyPracticeCounts.get(userId)) {
+      case (null) { 0 };
+      case (?dailyCount) { dailyCount.count };
+    };
+  };
+
+  public shared ({ caller }) func incrementDailyPracticeCount() : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can increment daily practice count");
+    };
+    let userId = caller.toText();
+    let today = getTodayDateString();
+    switch (dailyPracticeCounts.get(userId)) {
+      case (null) {
+        dailyPracticeCounts.add(userId, { date = today; count = 1 });
+        1;
+      };
+      case (?dailyCount) {
+        if (dailyCount.date == today) {
+          let newCount = dailyCount.count + 1;
+          dailyPracticeCounts.add(userId, { date = today; count = newCount });
+          newCount;
+        } else {
+          dailyPracticeCounts.add(userId, { date = today; count = 1 });
+          1;
+        };
+      };
+    };
+  };
+
+  // Weekly Mock Count Functions
+  public query ({ caller }) func getWeeklyMockCount() : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access weekly mock count");
+    };
+    let userId = caller.toText();
+    switch (weeklyMockCounts.get(userId)) {
+      case (null) { 0 };
+      case (?weeklyCount) { weeklyCount.count };
+    };
+  };
+
+  public shared ({ caller }) func incrementWeeklyMockCount() : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can increment weekly mock count");
+    };
+    let userId = caller.toText();
+    let currentWeek = getWeekKeyString();
+    switch (weeklyMockCounts.get(userId)) {
+      case (null) {
+        weeklyMockCounts.add(userId, { weekKey = currentWeek; count = 1 });
+        1;
+      };
+      case (?weeklyCount) {
+        if (weeklyCount.weekKey == currentWeek) {
+          let newCount = weeklyCount.count + 1;
+          weeklyMockCounts.add(userId, { weekKey = currentWeek; count = newCount });
+          newCount;
+        } else {
+          weeklyMockCounts.add(userId, { weekKey = currentWeek; count = 1 });
+          1;
+        };
+      };
+    };
+  };
+
+  // Performance Weakness Update
+  public shared ({ caller }) func updatePerformanceWeakness(chapterName : Text, accuracy : Float) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can update performance weakness");
+    };
+
+    let userId = caller.toText();
+
+    switch (chapters.get(userId)) {
+      case (null) { false };
+      case (?userChapters) {
+        switch (userChapters.get(chapterName)) {
+          case (null) { false };
+          case (?chapter) {
+            let performanceWeakness = Float.max(1, Float.min(5, (100.0 - accuracy) / 20.0));
+            let finalWeakness = Float.max(
+              1,
+              Float.min(
+                5,
+                (0.4 * chapter.weakness.toInt().toFloat() + 0.6 * performanceWeakness).toInt().toFloat(),
+              ),
+            );
+            let updatedChapter : UserChapter = {
+              chapter with weakness = Float.max(1, Float.min(5, finalWeakness)).toInt().toNat();
+            };
+            userChapters.add(chapterName, updatedChapter);
+            true;
+          };
+        };
+      };
+    };
+  };
+
+  // Mock Result Storage
+  public shared ({ caller }) func saveMockResult(score : Int, totalQuestions : Nat, accuracy : Float, physicsCorrect : Nat, chemCorrect : Nat, mathsCorrect : Nat) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save mock results");
+    };
+
+    let userId = caller.toText();
+    let id = Time.now().toText();
+
+    let newResult : MockResult = {
+      id;
+      timestamp = Time.now();
+      score;
+      totalQuestions;
+      accuracy;
+      physicsCorrect;
+      chemCorrect;
+      mathsCorrect;
+    };
+
+    let currentResults = switch (mockResults.get(userId)) {
+      case (null) { [] };
+      case (?results) { results };
+    };
+
+    let updatedResults = currentResults.concat([newResult]);
+    mockResults.add(userId, updatedResults);
+    id;
+  };
+
+  public query ({ caller }) func getMockResults() : async [MockResult] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can access mock results");
+    };
+
+    let userId = caller.toText();
+    switch (mockResults.get(userId)) {
+      case (null) { [] };
+      case (?results) { results };
+    };
+  };
+
+  // Admin Utility Functions
+  public shared ({ caller }) func setUserPro(userPrincipal : Text, isPro : Bool) : async Bool {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can set user Pro status");
+    };
+
+    switch (userSubscriptions.get(userPrincipal)) {
+      case (null) {
+        if (isPro) {
+          userSubscriptions.add(
+            userPrincipal,
+            { isPro = true; subscriptionExpiresAt = ?(Time.now() + 30 * 24 * 3600 * 1000000000) },
+          );
+        };
+        true;
+      };
+      case (?_) {
+        userSubscriptions.add(
+          userPrincipal,
+          {
+            isPro;
+            subscriptionExpiresAt = if (isPro) { ?(Time.now() + 30 * 24 * 3600 * 1000000000) } else {
+              null;
+            };
+          },
+        );
+        true;
+      };
+    };
+  };
+
+  public query ({ caller }) func getAllUsers() : async [Text] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can view all users");
+    };
+
+    userProfiles.keys().toArray();
+  };
+
+  // Seed Sample Questions
+  public shared ({ caller }) func seedQuestions() : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can seed questions");
+    };
+
+    let sampleQuestions = [
+      ("Physics", "Kinematics", "Easy"),
+      ("Chemistry", "Chemical Bonding", "Medium"),
+      ("Maths", "Quadratic Equations", "Hard"),
+      ("Physics", "Thermodynamics", "Easy"),
+      ("Chemistry", "Electrochemistry", "Hard"),
+      ("Maths", "Probability", "Medium"),
+    ];
+
+    for (i in Nat.range(0, sampleQuestions.size())) {
+      let (subject, chapter, difficulty) = sampleQuestions[i];
+      ignore await addQuestion(
+        "Sample question " # (i + 1).toText(),
+        "A",
+        "B",
+        "C",
+        "D",
+        "A",
+        2024,
+        subject,
+        chapter,
+        difficulty,
+        if (subject == "Maths") { "Advanced" } else { "Main" },
+      );
     };
   };
 };

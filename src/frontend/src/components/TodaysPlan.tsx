@@ -56,7 +56,6 @@ export default function TodaysPlan({
   const canSeePriority = proStatus?.canSeePriority ?? false;
   const isPro = proStatus?.isPro ?? false;
   const dailyPlanCount = proStatus?.dailyPlanCount ?? 0;
-  const monthlyDoneCount = proStatus?.monthlyDoneCount ?? 0;
 
   const handleGeneratePlan = useCallback(async () => {
     if (!canGeneratePlan) {
@@ -98,13 +97,6 @@ export default function TodaysPlan({
   ]);
 
   const handleMarkDone = async (chapterName: string) => {
-    if (!canMarkDone) {
-      toast.error(
-        "Monthly limit of 10 chapters reached. Upgrade to Pro for unlimited.",
-      );
-      return;
-    }
-
     setDoneChapters((prev) => new Set([...prev, chapterName]));
     onChapterDone(chapterName);
 
@@ -171,14 +163,7 @@ export default function TodaysPlan({
               >
                 {dailyPlanCount}/1
               </span>{" "}
-              plans today ·{" "}
-              <span
-                className="font-display font-semibold"
-                style={{ color: "oklch(0.72 0.17 60)" }}
-              >
-                {monthlyDoneCount}/10
-              </span>{" "}
-              chapters done this month
+              plans today
             </span>
           </div>
         )}

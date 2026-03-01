@@ -1,7 +1,9 @@
 import { Button } from "@/components/ui/button";
 import {
   BarChart2,
+  BookOpen,
   CheckCircle,
+  ClipboardList,
   Crown,
   Loader2,
   Target,
@@ -23,22 +25,31 @@ const FREE_COLOR = "oklch(0.55 0.015 250)";
 
 const COMPARISON = [
   { feature: "Plan Generation", free: "1 per day", pro: "Unlimited" },
+  { feature: "Practice Questions", free: "5 per day", pro: "Unlimited" },
+  { feature: "Mini Mock Tests", free: "1 per week", pro: "Unlimited" },
   { feature: "Weakness Scale", free: "Max 3", pro: "Full 1–5" },
   { feature: "Study Mode Visibility", free: "Hidden", pro: "Full view" },
   { feature: "Analytics Dashboard", free: "Locked", pro: "Full access" },
-  { feature: "Mark Done Limit", free: "10/month", pro: "Unlimited" },
+  { feature: "Mock Test History", free: "Locked", pro: "Available" },
   { feature: "Priority Scores", free: "Hidden", pro: "Visible" },
-  { feature: "Chapter Progress Over Time", free: "Locked", pro: "Available" },
-  { feature: "Execution History", free: "Locked", pro: "Available" },
 ];
 
 const PRO_BENEFITS = [
   { icon: Zap, text: "Unlimited plan generation every day" },
+  {
+    icon: BookOpen,
+    text: "Unlimited PYQ practice questions with AI solutions",
+  },
+  {
+    icon: ClipboardList,
+    text: "Unlimited mini mock tests with adaptive feedback",
+  },
   { icon: Target, text: "Full 1–5 weakness scale for precise prioritization" },
   { icon: Unlock, text: "Full study mode visibility (Foundation → Survival)" },
-  { icon: BarChart2, text: "Advanced analytics and study streak tracking" },
-  { icon: CheckCircle, text: "Unlimited chapter completion tracking" },
-  { icon: Crown, text: "Priority score visibility in every plan" },
+  {
+    icon: BarChart2,
+    text: "Advanced analytics, mock history, and performance trends",
+  },
 ];
 
 export default function SubscriptionPage({ proStatus }: SubscriptionPageProps) {

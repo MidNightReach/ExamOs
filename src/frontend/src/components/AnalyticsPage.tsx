@@ -1,10 +1,30 @@
 import { Button } from "@/components/ui/button";
-import { BarChart2, Crown, Flame, Lock, TrendingUp } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  BarChart2,
+  BookOpen,
+  Crown,
+  Flame,
+  Lock,
+  TrendingUp,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useMemo } from "react";
 import type { UserChapter } from "../backend.d";
 import type { ProStatus } from "../hooks/useProStatus";
-import { useGetProfile, useGetStreak } from "../hooks/useQueries";
+import {
+  useGetDailyPracticeCount,
+  useGetMockResults,
+  useGetProfile,
+  useGetStreak,
+} from "../hooks/useQueries";
 import { getDaysLeft, getExamDate, getMode } from "../utils/planEngine";
 
 interface AnalyticsPageProps {
@@ -23,6 +43,9 @@ const SUBJECT_COLORS: Record<string, string> = {
 function AnalyticsContent({ chapters }: { chapters: UserChapter[] }) {
   const { data: streak } = useGetStreak();
   const { data: profile } = useGetProfile();
+  const { data: mockResults = [] } = useGetMockResults();
+  const { data: dailyPracticeCountRaw } = useGetDailyPracticeCount();
+  const dailyPracticeCount = Number(dailyPracticeCountRaw ?? 0);
 
   const stats = useMemo(() => {
     const subjects = ["Physics", "Chemistry", "Maths"];
@@ -305,43 +328,171 @@ function AnalyticsContent({ chapters }: { chapters: UserChapter[] }) {
         </div>
       </motion.div>
 
-      {/* Study History placeholder */}
+      {/* Practice Stats */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35 }}
         className="rounded-xl glass p-5"
       >
-        <h3
-          className="font-display font-semibold text-sm uppercase tracking-wider mb-3"
-          style={{ color: "oklch(0.88 0.01 250)" }}
-        >
-          Chapter Progress Over Time
-        </h3>
+        <div className="flex items-center gap-2 mb-4">
+          <BookOpen className="w-4 h-4" style={{ color: PRIMARY }} />
+          <h3
+            className="font-display font-semibold text-sm uppercase tracking-wider"
+            style={{ color: "oklch(0.88 0.01 250)" }}
+          >
+            Practice Stats
+          </h3>
+        </div>
+
+        {/* Daily Practice Count */}
         <div
-          className="rounded-lg p-6 text-center"
+          className="rounded-lg px-4 py-3 mb-4 flex items-center justify-between"
           style={{
-            background: "oklch(0.18 0.018 250)",
-            border: "1px dashed oklch(0.28 0.02 250)",
+            background: "oklch(0.72 0.17 195 / 0.07)",
+            border: "1px solid oklch(0.72 0.17 195 / 0.18)",
           }}
         >
-          <BarChart2
-            className="w-8 h-8 mx-auto mb-2"
-            style={{ color: "oklch(0.35 0.02 250)" }}
-          />
-          <p
-            className="text-sm font-display font-medium"
-            style={{ color: "oklch(0.50 0.012 250)" }}
+          <span
+            className="text-sm font-body"
+            style={{ color: "oklch(0.70 0.012 250)" }}
           >
-            Historical charts coming soon
-          </p>
-          <p
-            className="text-xs font-body mt-1"
-            style={{ color: "oklch(0.38 0.012 250)" }}
+            Questions answered today
+          </span>
+          <span
+            className="font-mono font-bold text-lg"
+            style={{ color: PRIMARY }}
           >
-            Track progress trends across weeks and months
-          </p>
+            {dailyPracticeCount}
+          </span>
         </div>
+
+        {/* Mock Results Table */}
+        <h4
+          className="font-display font-medium text-xs uppercase tracking-wider mb-3"
+          style={{ color: "oklch(0.55 0.012 250)" }}
+        >
+          Mock Test History ({mockResults.length} tests)
+        </h4>
+
+        {mockResults.length === 0 ? (
+          <div
+            className="rounded-lg p-6 text-center"
+            style={{
+              background: "oklch(0.18 0.018 250)",
+              border: "1px dashed oklch(0.28 0.02 250)",
+            }}
+          >
+            <p
+              className="text-sm font-body"
+              style={{ color: "oklch(0.45 0.012 250)" }}
+            >
+              No mock tests taken yet. Start a mini mock to see results here.
+            </p>
+          </div>
+        ) : (
+          <div
+            className="rounded-xl overflow-hidden"
+            style={{ border: "1px solid oklch(0.24 0.02 250)" }}
+          >
+            <Table>
+              <TableHeader>
+                <TableRow style={{ borderColor: "oklch(0.24 0.02 250)" }}>
+                  <TableHead className="font-display text-xs uppercase tracking-wider text-muted-foreground">
+                    Date
+                  </TableHead>
+                  <TableHead className="font-display text-xs uppercase tracking-wider text-muted-foreground text-right">
+                    Score
+                  </TableHead>
+                  <TableHead className="font-display text-xs uppercase tracking-wider text-muted-foreground text-right">
+                    Accuracy
+                  </TableHead>
+                  <TableHead className="font-display text-xs uppercase tracking-wider text-muted-foreground text-right">
+                    Phy
+                  </TableHead>
+                  <TableHead className="font-display text-xs uppercase tracking-wider text-muted-foreground text-right">
+                    Chem
+                  </TableHead>
+                  <TableHead className="font-display text-xs uppercase tracking-wider text-muted-foreground text-right">
+                    Math
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...mockResults]
+                  .sort((a, b) => Number(b.timestamp) - Number(a.timestamp))
+                  .slice(0, 10)
+                  .map((result) => {
+                    const date = new Date(Number(result.timestamp) / 1_000_000);
+                    const formattedDate = date.toLocaleDateString("en-IN", {
+                      day: "numeric",
+                      month: "short",
+                      year: "2-digit",
+                    });
+                    return (
+                      <TableRow
+                        key={result.id}
+                        style={{ borderColor: "oklch(0.20 0.018 250 / 0.5)" }}
+                        className="hover:bg-secondary/20"
+                      >
+                        <TableCell
+                          className="text-xs font-body"
+                          style={{ color: "oklch(0.65 0.012 250)" }}
+                        >
+                          {formattedDate}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span
+                            className="font-mono text-sm font-bold"
+                            style={{
+                              color:
+                                Number(result.score) >= 0
+                                  ? PRIMARY
+                                  : "oklch(0.65 0.23 25)",
+                            }}
+                          >
+                            {Number(result.score) >= 0 ? "+" : ""}
+                            {Number(result.score)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span
+                            className="font-mono text-xs"
+                            style={{
+                              color:
+                                result.accuracy >= 50
+                                  ? "oklch(0.72 0.17 145)"
+                                  : "oklch(0.65 0.23 25)",
+                            }}
+                          >
+                            {Math.round(result.accuracy)}%
+                          </span>
+                        </TableCell>
+                        <TableCell
+                          className="text-right font-mono text-xs"
+                          style={{ color: "oklch(0.65 0.18 240)" }}
+                        >
+                          {Number(result.physicsCorrect)}
+                        </TableCell>
+                        <TableCell
+                          className="text-right font-mono text-xs"
+                          style={{ color: "oklch(0.65 0.18 145)" }}
+                        >
+                          {Number(result.chemCorrect)}
+                        </TableCell>
+                        <TableCell
+                          className="text-right font-mono text-xs"
+                          style={{ color: "oklch(0.70 0.17 60)" }}
+                        >
+                          {Number(result.mathsCorrect)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </motion.div>
     </div>
   );
